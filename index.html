@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <title>Stopwatch - vanilla JS</title>
+  </head>
+
+  <body>
+
+    <script type="text/javascript">
+      'use strict';
+
+      // This is all based on the stopwatch example in "A State Container" 
+      // section of the "React Fundamentals" course at PluralSight by 
+      // Liam McLennan.
+      // Changes are applied only to better understand it by going 
+      // through a refactoring process (and to try and do it with no 
+      // library magic - again, for the purpose of learning).
+      // The course is located at 
+      // https://app.pluralsight.com/player?course=react-fundamentals-update
+
+      // Possible intents (actions)
+      const intents = {
+        TICK: 'TICK',
+        START: 'START',
+        STOP: 'STOP',
+        RESET: 'RESET'
+      }
+
+      /**
+       * Returns an updated state
+       * @param {object} state 
+       * @param {string} intent
+       */
+      const reducer = (state = { running: false, time: 0 }, intent) => {
+        // Merge changes to state based on intent (action) 
+        // with passed in state
+        switch (intent) {
+          case intents.TICK:
+            return Object.assign(state, { time: state.running ? state.time + 1 : state.time });
+            break;
+          case intents.START:
+            return Object.assign(state, { running: true });
+            break;
+          case intents.STOP:
+            return Object.assign(state, { running: false });
+            break;
+          case intents.RESET:
+            return Object.assign(state, { running: false, time: 0 });
+            break;
+          default:
+            return state;
+            break;
+        }
+      };
+
+      /**
+       * Returns the view
+       * @param {object} state 
+       */
+      const view = (state) => {
+        // Calculate minutes and seconds
+        const minutes = Math.floor(state.time / 60);
+        const seconds = state.time % 60;
+        // Handler for events - kept within the view for easy access 
+        // to state
+        const handler = (event) => {
+          switch (event.target.name) {
+            case 'start-stop':
+              store.dispatch(state.running ? intents.STOP : intents.START);
+              break;
+            case 'reset':
+              store.dispatch(intents.RESET);
+              break;
+            default:
+              break;
+          }
+        };
+        // Create DOM elements for the view and add event handlers
+        // Could probably be done more elegant, but I just need the result
+        const clock = document.createElement('div');
+        const timeDisplay = document.createElement('div');
+        timeDisplay.innerText = `${minutes}:${(seconds <= 9 ? '0' : '') + seconds}`;
+        clock.appendChild(timeDisplay);
+        const startStopBtn = document.createElement('button');
+        startStopBtn.name = 'start-stop';
+        startStopBtn.innerText = state.running ? intents.STOP : intents.START;
+        startStopBtn.addEventListener('click', handler);
+        clock.appendChild(startStopBtn);
+        const resetBtn = document.createElement('button');
+        resetBtn.name = 'reset';
+        resetBtn.innerText = intents.RESET;
+        resetBtn.addEventListener('click', handler);
+        clock.appendChild(resetBtn);
+        return clock;
+      };
+
+      /**
+       * Returns a store with dispatch, subscribe, and getState functions
+       */
+      const createStore = (reducer) => {
+        // Declare but don't assign internalState
+        // if undefined is passed to reducer, the initial state will be used
+        let internalState;
+        let handlers = [];
+        return {
+          dispatch: (intent) => {
+            internalState = reducer(internalState, intent);
+            // Run all handlers
+            handlers.forEach(h => h());
+          },
+          subscribe: (handler) => { handlers.push(handler); },
+          getState: () => internalState
+        }
+      };
+
+      const store = createStore(reducer);
+
+      /**
+       * Renders the view
+       */
+      const render = () => {
+        // Could probably be done more elegant, but I just need the result
+        document.body.innerHTML = '';
+        document.body.appendChild(view(store.getState()));
+      }
+
+      // Subscribe to state updates and re-render
+      store.subscribe(render);
+
+      // Dispatch a TICK each second
+      setInterval(() => {
+        store.dispatch(intents.TICK);
+      }, 1000);
+
+    </script>
+  </body>
+
+</html>
